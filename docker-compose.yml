@@ -1,13 +1,17 @@
-# docker-compose.yml UNIFICADO — Proyecto_Documentacion
-# Servicios: frontend + hermes + qdrant + omniroute (n8n queda fuera a proposito)
+# docker-compose.yml — Proyecto_Documentacion (HierDoku)
+# Servicios: frontend + hermes + qdrant + omniroute
 #
-# ADAPTADO PARA EL NUEVO COMPUTADOR:
-# - Usa imágenes preconstruidas desde Docker Hub.
-# - Lee las bases de datos de Qdrant y Omniroute desde carpetas locales extraídas.
+# DESPLIEGUE "2 CLAVES":
+#   1. cp .env.example .env   -> pon OPENAI_API_KEY y JINA_API_KEY
+#   2. docker compose up -d
+# El primer arranque del contenedor hermes ejecuta secrets/bootstrap.sh, que:
+#   - copia el cerebro (hermes/) a ${USERPROFILE}/.hermes (= /opt/data)
+#   - escribe /opt/data/.env con los secretos
+#   - crea el venv de ingesta y registra Jina en OmniRoute
+#   - genera el webhook documentar-pipeline
 
 services:
   frontend:
-    # AQUÍ: Reemplaza TU_USUARIO_DE_DOCKER por tu usuario real de Docker Hub
     image: kjaramillo/frontend_app:listo
     container_name: frontend_app
     ports:
@@ -28,15 +32,26 @@ services:
     restart: unless-stopped
 
   hermes:
-    # AQUÍ: Usamos la imagen congelada con tus cambios
     image: kjaramillo/hermes:listo
     container_name: hermes
     user: root
     working_dir: /opt/hermes
     command: ["bash", "/secrets/hermes-entrypoint.sh"]
+    environment:
+      # claves del usuario (las 2 que se ponen en .env)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - JINA_API_KEY=${JINA_API_KEY}
+      # secretos internos (para que el bootstrap los escriba en /opt/data/.env)
+      - API_SERVER_KEY=${API_SERVER_KEY}
+      - PIPELINE_WEBHOOK_SECRET=${PIPELINE_WEBHOOK_SECRET}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - OMNIROUTE_API_KEY=${OMNIROUTE_API_KEY}
     volumes:
       - "./secrets:/secrets"
-      # RECUERDA: Pegar la carpeta .hermes en C:\Users\<TuNuevoUsuario>\ en el nuevo PC
+      # cerebro versionado (solo lectura, lo copia el bootstrap al 1er arranque)
+      - "./hermes:/opt/bootstrap:ro"
+      # home persistente de Hermes (memoria, skills, config, docs)
       - "${USERPROFILE}/.hermes:/opt/data"
       - "C:\\:/mnt/host"
     ports:
@@ -57,7 +72,6 @@ services:
     ports:
       - "6333:6333"
     volumes:
-      # AQUÍ: Lee los vectores directamente de la carpeta que extrajimos
       - ./mis_datos_qdrant:/qdrant/storage
     networks:
       - appnet
@@ -66,7 +80,6 @@ services:
     restart: unless-stopped
 
   omniroute:
-    # AQUÍ: Usamos la imagen congelada con tus cambios
     image: kjaramillo/omniroute:listo
     container_name: omniroute
     user: node
@@ -81,7 +94,6 @@ services:
     ports:
       - "20128:20128"
     volumes:
-      # AQUÍ: Lee los datos de Omniroute desde la carpeta que extrajimos hoy
       - ./mis_datos_omniroute:/data
     networks:
       - appnet
@@ -92,6 +104,3 @@ services:
 networks:
   appnet:
     driver: bridge
-
-# Se eliminaron las definiciones de volúmenes al final porque 
-# ahora estamos usando las carpetas locales ./mis_datos_qdrant y ./mis_datos_omniroute

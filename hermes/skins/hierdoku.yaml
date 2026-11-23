@@ -1,0 +1,59 @@
+# Skin de marca — HierDoku
+# Tematiza CLI, TUI y app de escritorio desde un solo archivo.
+# Activar: hermes config set display.skin hierdoku
+
+name: hierdoku
+description: Marca HierDoku — azul celeste sobre grafito oscuro
+
+colors:
+  # Base
+  background: "#16191D"
+
+  # Acento de marca (azul HierDoku, contraste > 4.5:1)
+  ui_accent: "#4FB5FF"
+  banner_accent: "#4FB5FF"
+
+  # Jerarquia de texto
+  banner_title: "#F8FAFC"   # titulos / texto primario
+  ui_primary: "#F8FAFC"
+  banner_text: "#F8FAFC"    # cuerpo
+  ui_text: "#F8FAFC"
+  ui_label: "#F8FAFC"
+  banner_dim: "#8A99A8"     # apagado / secundario / conectores
+  banner_border: "#2B333E"
+  ui_border: "#2B333E"
+
+  # Marcador de herramientas y razonamiento
+  ui_tool: "#4FB5FF"
+  ui_thinking: "#94A3B8"
+
+  # Estados semanticos
+  ui_ok: "#34D399"
+  ui_warn: "#F59E0B"
+  ui_error: "#F87171"
+
+  # Chrome de CLI / TUI
+  prompt: "#4FB5FF"
+  input_rule: "#4FB5FF"
+  response_border: "#4FB5FF"
+  status_bar_bg: "#101317"
+  status_bar_text: "#F8FAFC"
+  status_bar_good: "#34D399"
+  status_bar_warn: "#F59E0B"
+  status_bar_bad: "#F87171"
+  status_bar_critical: "#F87171"
+  session_label: "#4FB5FF"
+  session_border: "#2B333E"
+
+  # Sintaxis de codigo (derivada de la paleta)
+  syntax_string: "#34D399"
+  syntax_number: "#F59E0B"
+  syntax_keyword: "#4FB5FF"
+  syntax_comment: "#8A99A8"
+
+branding:
+  agent_name: HierDoku
+  prompt_symbol: "❯"
+  help_header: "HierDoku — Comandos"
+
+tool_prefix: "┊"

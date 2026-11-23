@@ -9,6 +9,10 @@
 secrets/user_keys.env
 secrets/.gateway_ready
 
+# Por si algo escribe secretos dentro de hermes/ (no debe pasar, pero por si acaso)
+hermes/.env
+hermes/webhook_subscriptions.json
+
 # ===========================================================================
 # DATOS / BASES DE DATOS LOCALES  (no versionar)
 # ===========================================================================

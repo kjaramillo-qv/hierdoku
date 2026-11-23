@@ -4,6 +4,33 @@ HierDoku — Documentador Funcional Oficial. Frontend Streamlit que usa a
 [Hermes](https://github.com/anthropics/hermes) como motor (herramientas,
 memoria, skills, base vectorial) junto con Qdrant y OmniRoute.
 
+## Despliegue (solo 2 claves)
+
+```bash
+# 1) Crear el archivo de entorno y poner SOLO 2 claves
+cp .env.example .env
+#    -> OPENAI_API_KEY  (la "key de Hermes", modelo de chat)
+#    -> JINA_API_KEY    (embeddings, se registra sola en OmniRoute)
+
+# 2) Levantar el stack
+docker compose up -d
+
+# 3) Abrir http://localhost
+```
+
+El **primer arranque** del contenedor `hermes` ejecuta `secrets/bootstrap.sh`,
+que deja todo listo de forma automática:
+
+- Copia el "cerebro" (`hermes/` → `~/.hermes`): personalidad, skills y scripts.
+- Escribe `~/.hermes/.env` con los secretos.
+- Registra la clave de Jina en OmniRoute (`POST /api/providers`).
+- Crea el venv de ingesta (`fastembed` + `qdrant-client`).
+- Genera el webhook `documentar-pipeline`.
+
+> ⚠️ El primer arranque tarda **1-3 minutos** en terminar de provisionar el venv
+> y registrar Jina. Espera un par de minutos antes de hacer el onboarding.
+> Puedes ver el progreso con `docker logs hermes` (busca `[bootstrap]`).
+
 ## Servicios (docker-compose)
 
 | Servicio    | Imagen                              | Puerto (host) | Descripción                              |
@@ -19,90 +46,52 @@ memoria, skills, base vectorial) junto con Qdrant y OmniRoute.
 .
 ├── docker-compose.yml          # 4 contenedores
 ├── frontend/                   # app Streamlit (onboarding + chat + pipeline)
-├── secrets/                    # entrypoint + sync de keys del usuario final
-├── hermes/                     # EL "CEREBRO" del agente (ver abajo)
-├── .env.example                # plantilla de secretos (copiar a .env)
+├── secrets/                    # bootstrap.sh + entrypoint + sync de keys
+├── hermes/                     # EL "CEREBRO" del agente (config, skills, scripts)
+├── .env.example                # plantilla: solo 2 claves que rellenar
 └── README.md
 ```
 
 ## El cerebro de Hermes (`hermes/`)
 
-Hermes vive en `${USERPROFILE}/.hermes` (fuera de este repo, montado como
-`/opt/data` dentro del contenedor). Para que el sistema funcione, esa carpeta
-debe contener los siguientes elementos, que aquí están versionados y
-**sanitizados** (sin claves):
+Versionado y sanitizado (sin claves). Se copia solo a `${USERPROFILE}/.hermes`
+en el primer arranque. Contiene:
 
-| Elemento | Ubicación en el repo | Qué es |
-|---|---|---|
-| `config.yaml` | `hermes/config.yaml` | Personalidad "Documentador Funcional Oficial" (flujo de 7 pasos), modelo, terminal y plataforma webhook (puerto 8644) |
-| Webhook pipeline | `hermes/webhook_subscriptions.example.json` | Prompt del pipeline automático `documentar-pipeline` (secret enmascarado) |
-| Skills | `hermes/skills/**` | `onboarding-primera-vez`, `qdrant-direct-search`, `capturas-documentacion`, `knowledge-base-webhook`, `integracion-frontend-hermes-contenedor`, `acceso-archivos-host-contenedor`, `documenting-web-app-ui` |
-| Scripts | `hermes/scripts/**` | `ingesta_hibrida.py`, `busqueda_hibrida.py`, `izy_cdp.py` + docs de flujo/infraestructura |
+- `config.yaml` — personalidad "Documentador Funcional Oficial" (flujo 7 pasos),
+  modelo, terminal y plataforma webhook (puerto 8644).
+- `webhook_subscriptions.example.json` — prompt del pipeline automático (secret
+  enmascarado; el bootstrap lo sustituye por el real).
+- `skills/**` — `onboarding-primera-vez`, `qdrant-direct-search`,
+  `capturas-documentacion`, `knowledge-base-webhook`,
+  `integracion-frontend-hermes-contenedor`, `acceso-archivos-host-contenedor`,
+  `documenting-web-app-ui`.
+- `scripts/**` — `ingesta_hibrida.py`, `busqueda_hibrida.py`, `izy_cdp.py` + docs.
+- `skins/hierdoku.yaml` — tema de marca.
 
-### Cómo conectar Hermes con todo lo demás
+### Cómo conecta Hermes con todo
 
-- **Hermes → Qdrant**: `http://host.docker.internal:6333` (búsqueda híbrida: denso + sparse)
-- **Hermes → OmniRoute (embeddings)**: `http://host.docker.internal:20128/v1/embeddings`, modelo `jina-ai/jina-embeddings-v5-text-small` (1024 dims)
-- **Hermes → Ollama**: `http://host.docker.internal:11434` (modelo `nomic-embed-text`, 768 dims; vía skill `qdrant-direct-search`)
+- **Hermes → Qdrant**: `http://host.docker.internal:6333`
+- **Hermes → OmniRoute (embeddings)**: `http://host.docker.internal:20128/v1/embeddings`,
+  modelo `jina-ai/jina-embeddings-v5-text-small` (1024 dims)
 - **Frontend → Hermes**: `hermes:8642` (chat) + `hermes:8644` (webhook)
-- Todo depende de la red `appnet` + `host.docker.internal` (`extra_hosts` en el compose).
-
-## Requisitos
-
-- Docker y Docker Compose
-- Carpeta `${USERPROFILE}/.hermes` poblada con el contenido de `hermes/` (ver abajo)
-- Carpetas locales `./mis_datos_qdrant` y `./mis_datos_omniroute` (datos; no se versionan)
-
-## Configuración
-
-1. Crea tu archivo de entorno a partir del ejemplo:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   Rellena las variables reales en `.env` (claves de Hermes y OmniRoute).
-
-2. Copia el "cerebro" de Hermes a `${USERPROFILE}/.hermes`:
-
-   ```powershell
-   # Windows (PowerShell)
-   Copy-Item -Recurse -Force ".\hermes\*" "$env:USERPROFILE\.hermes\"
-   ```
-
-   Esto deja `config.yaml`, las skills y los scripts donde Hermes los lee.
-   Luego configura el webhook (una sola vez) sustituyendo el secret real:
-
-   ```bash
-   cp hermes/webhook_subscriptions.example.json \
-      ~/.hermes/webhook_subscriptions.json   # reemplaza REEMPLAZA_ESTE_SECRET
-   ```
-
-3. (Opcional) Pre-sembra el archivo de keys del usuario final:
-
-   ```bash
-   cp secrets/user_keys.env.example secrets/user_keys.env
-   ```
-
-   Normalmente no hace falta: el frontend crea este archivo durante el
-   onboarding de primera vez.
-
-4. Levanta los servicios:
-
-   ```bash
-   docker compose up -d
-   ```
-
-5. Abre `http://localhost` y carga tu API key del proveedor de IA en la
-   pantalla de bienvenida.
+- Red `appnet` + `host.docker.internal` (`extra_hosts` en el compose).
 
 ## Seguridad
 
-- `.env`, `secrets/user_keys.env`, `secrets/.gateway_ready` y las carpetas de
+- `.env`, `secrets/user_keys.env`, `secrets/.gateway_ready`, y las carpetas de
   datos (`mis_datos_qdrant/`, `mis_datos_omniroute/`) están en `.gitignore` y
-  **nunca** se suben al repositorio.
-- `hermes/webhook_subscriptions.example.json` tiene el secret **enmascarado**
-  (`REEMPLAZA_ESTE_SECRET`); el real vive solo en el `~/.hermes` del operador.
-- El `config.yaml` versionado no contiene claves: usa `${env:WEBHOOK_SECRET}` y
-  las credenciales se resuelven desde `.env`.
-- Los secretos viven solo en el equipo del operador.
+  **nunca** se suben.
+- `hermes/webhook_subscriptions.example.json` tiene el secret **enmascarado**.
+- `config.yaml` no contiene claves (usa `${env:WEBHOOK_SECRET}`).
+- Los secretos internos del `.env.example` son valores generados de ejemplo:
+  **regéneralos** si despliegas para un cliente distinto.
+
+## Solución de problemas
+
+- **Embeds no responden / error de credencial Jina**: revisa
+  `docker logs hermes | grep bootstrap`. Asegúrate de que `JINA_API_KEY` está
+  en `.env` y reinicia con `docker compose up -d --force-recreate hermes`.
+- **El frontend pide API key en el onboarding**: es lo esperado si no pusiste
+  `OPENAI_API_KEY` en `.env`; cárgala en la pantalla de bienvenida.
+- **Sin capturas**: el navegador Playwright se instala bajo demanda (ver skill
+  `capturas-documentacion`).

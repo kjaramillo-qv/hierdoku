@@ -1,0 +1,8 @@
+# Forzar saltos de linea LF en scripts que corren DENTRO del contenedor Linux.
+# Sin esto, un checkout en Windows con core.autocrlf=true metería CRLF y
+# rompería los .sh (y a veces los .py) dentro del contenedor.
+*.sh   text eol=lf
+*.py   text eol=lf
+*.md   text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
