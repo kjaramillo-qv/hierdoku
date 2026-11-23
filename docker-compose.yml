@@ -1,0 +1,97 @@
+# docker-compose.yml UNIFICADO — Proyecto_Documentacion
+# Servicios: frontend + hermes + qdrant + omniroute (n8n queda fuera a proposito)
+#
+# ADAPTADO PARA EL NUEVO COMPUTADOR:
+# - Usa imágenes preconstruidas desde Docker Hub.
+# - Lee las bases de datos de Qdrant y Omniroute desde carpetas locales extraídas.
+
+services:
+  frontend:
+    # AQUÍ: Reemplaza TU_USUARIO_DE_DOCKER por tu usuario real de Docker Hub
+    image: kjaramillo/frontend_app:listo
+    container_name: frontend_app
+    ports:
+      - "80:8501"          # http://localhost
+    environment:
+      - HERMES_API_URL=http://hermes:8642/v1/chat/completions
+      - HERMES_WEBHOOK_URL=http://hermes:8644/webhooks/documentar-pipeline
+      - HERMES_API_KEY=${API_SERVER_KEY}
+      - HERMES_WEBHOOK_SECRET=${PIPELINE_WEBHOOK_SECRET}
+    volumes:
+      - "./secrets:/secrets"
+    networks:
+      - appnet
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - hermes
+    restart: unless-stopped
+
+  hermes:
+    # AQUÍ: Usamos la imagen congelada con tus cambios
+    image: kjaramillo/hermes:listo
+    container_name: hermes
+    user: root
+    working_dir: /opt/hermes
+    command: ["bash", "/secrets/hermes-entrypoint.sh"]
+    volumes:
+      - "./secrets:/secrets"
+      # RECUERDA: Pegar la carpeta .hermes en C:\Users\<TuNuevoUsuario>\ en el nuevo PC
+      - "${USERPROFILE}/.hermes:/opt/data"
+      - "C:\\:/mnt/host"
+    ports:
+      - "8642:8642"
+      - "8644:8644"
+    networks:
+      - appnet
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - qdrant
+      - omniroute
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      # AQUÍ: Lee los vectores directamente de la carpeta que extrajimos
+      - ./mis_datos_qdrant:/qdrant/storage
+    networks:
+      - appnet
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  omniroute:
+    # AQUÍ: Usamos la imagen congelada con tus cambios
+    image: kjaramillo/omniroute:listo
+    container_name: omniroute
+    user: node
+    working_dir: /app
+    command: node dev/run-standalone.mjs
+    environment:
+      - DATA_DIR=/data
+      - OMNIROUTE_API_KEY=${OMNIROUTE_API_KEY}
+      - INITIAL_PASSWORD=${OMNIROUTE_INITIAL_PASSWORD}
+      - JWT_SECRET=${OMNIROUTE_JWT_SECRET}
+      - STORAGE_ENCRYPTION_KEY=${OMNIROUTE_STORAGE_KEY}
+    ports:
+      - "20128:20128"
+    volumes:
+      # AQUÍ: Lee los datos de Omniroute desde la carpeta que extrajimos hoy
+      - ./mis_datos_omniroute:/data
+    networks:
+      - appnet
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+networks:
+  appnet:
+    driver: bridge
+
+# Se eliminaron las definiciones de volúmenes al final porque 
+# ahora estamos usando las carpetas locales ./mis_datos_qdrant y ./mis_datos_omniroute
