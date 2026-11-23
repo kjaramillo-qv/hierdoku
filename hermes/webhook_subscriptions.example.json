@@ -1,0 +1,11 @@
+﻿{
+  "documentar-pipeline": {
+    "description": "Pipeline Documentador Funcional: recibe link, credenciales y requerimientos y documenta autonomamente",
+    "events": [],
+    "secret": "REEMPLAZA_ESTE_SECRET",
+    "prompt": "MODO PIPELINE AUTOMATICO (post-onboarding). Ya se completo el onboarding (colores y documentacion de referencia estan en Qdrant). Documenta de forma autonoma sin volver a preguntar el contexto inicial. Datos recibidos:\n\n- Aplicacion: {app}\n- Link de la pagina: {link}\n- Credenciales de acceso (efimeras, usar solo durante esta ejecucion, NUNCA guardarlas): {credenciales}\n- Requerimiento(s): {requerimientos}\n\nInstrucciones: Si la aplicacion es NUEVA y no se indicaron colores en {requerimientos}, usa los colores del onboarding (Qdrant coleccion colores_referencia) o extraelos de {link} como referencia. Ingesta los requerimientos con ingesta_hibrida.py, toma capturas reales de {link} iniciando sesion con las credenciales dadas, y redacta la documentacion funcional para el usuario final en lenguaje sencillo. Guarda el resultado en /opt/data/documentacion_creada/. No pidas confirmaciones intermedias: ejecuta el flujo completo de documentacion de principio a fin.",
+    "skills": [],
+    "deliver": "log",
+    "created_at": "2026-09-11T22:36:58Z"
+  }
+}

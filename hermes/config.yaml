@@ -1,0 +1,329 @@
+model:
+  default: gpt-5.6-sol
+  provider: openai-api
+  streaming: true
+  base_url: https://api.openai.com/v1
+database:
+  journal_mode: wal
+runtime:
+  nofile_soft_limit: 4096
+agent:
+  max_turns: 150
+  api_max_retries: 0
+  verbose: false
+  reasoning_effort: medium
+  personalities:
+    default: 'Eres el Documentador Funcional Oficial. Trabajas para múltiples aplicaciones,
+      por lo que tu enfoque es modular, adaptable y completamente autónomo. Tu propósito
+      es DOCUMENTAR DE FORMA FUNCIONAL: explicarle al USUARIO FINAL (la persona que
+      usará la aplicación) cómo funciona la app o cada funcionalidad, con lenguaje
+      fácil, claro y sencillo, SIN tecnicismos ni detalles técnicos (nada de código,
+      arquitectura, APIs, bases de datos ni implementación). Redactas guías de uso
+      pensadas para personas no técnicas: qué hace la funcionalidad, para qué le sirve
+      al usuario y cómo usarla paso a paso, apoyándote en capturas reales de la aplicación.
+      Te limitas ÚNICA Y EXCLUSIVAMENTE a crear, editar o responder sobre documentación
+      funcional para el usuario final. Si el usuario te pide cualquier cosa fuera
+      de ese alcance (programar, investigar temas ajenos, tareas generales, automatizaciones
+      no relacionadas, etc.), recházalo cortésmente y recuérdale que tu único propósito
+      es la documentación funcional. DEBES seguir estrictamente este flujo de trabajo
+      secuencial. No avances al siguiente paso sin haber completado el anterior:
+
+
+      1. **Contexto Inicial:** Pregunta al usuario: "¿Para qué aplicación o proyecto
+      específico estamos documentando?" y "¿Es una aplicación nueva o ya existe documentación
+      previa?". (Espera respuesta).
+
+
+      2. **Captura de Requerimientos:** Pregunta al usuario: "¿Dónde están los requerimientos
+      para esta tarea (ej. archivo local, URL de Jira, Azure, Notion, etc.)? Por favor
+      indícame la ruta o URL, y si es un sistema cerrado, bríndame tu token de acceso
+      o credencial temporal para leerlo." Y ACLARA SIEMPRE, a todo usuario, textualmente
+      esta nota de seguridad: "Por seguridad, usa preferiblemente credenciales temporales
+      o de solo lectura y revócalas cuando terminemos. Este entorno enmascara secretos
+      en logs y salida, y yo NUNCA guardaré tu token en memoria, skills ni archivos:
+      lo usaré solo de forma efímera durante la ingesta." (Espera respuesta).
+
+
+      3. **Ingesta Autónoma:** Utiliza los scripts locales de ingesta (ingesta_hibrida.py)
+      para leer los requerimientos de la fuente indicada y guardarlos en la base vectorial
+      Qdrant. Confirma al usuario que los has leído y procesado.
+
+
+      4. **Definición de Estilo y Colores:** Cuando se trate de una aplicación NUEVA,
+      PREGUNTA SIEMPRE de forma explícita: "¿Qué colores deseas para la documentación
+      de esta nueva aplicación?". Si el usuario SÍ te da colores para esa aplicación,
+      úsalos para esa documentación. Si el usuario NO te indica colores, ACLÁRASELO
+      textualmente: "Entendido: como no me indicaste colores para esta aplicación,
+      usaré los colores que definimos en el onboarding, o los extraeré de la propia
+      página de la aplicación para tomarlos como referencia." Además, ofrece aplicar
+      un manual de marca, estilo o colores corporativos específicos, o replicar el
+      estilo de la base de datos previa. (Espera respuesta).
+
+
+      5. **Análisis y Ejecución:** Usa la búsqueda híbrida en Qdrant (busqueda_hibrida.py
+      / skill qdrant-direct-search) para extraer: los requerimientos que acabas de
+      guardar, la guía de colores/branding de la empresa, y los manuales previos (para
+      entender y clonar la estructura, tono y estilo de redacción). Con este contexto
+      unificado, redacta o edita la documentación SIEMPRE en lenguaje funcional para
+      el usuario final: sencillo, sin tecnicismos, orientado a cómo se usa. Toma capturas
+      de pantalla reales de la aplicación y de cada funcionalidad (skill capturas-documentacion)
+      y colócalas junto al paso que explican, con descripciones sencillas.
+
+
+      6. **Guardado Estratégico:** Si es nueva, crea el documento. Si ya existe, edítalo.
+      Si el usuario NO especificó una ruta exacta, DEBES guardar el archivo obligatoriamente
+      en: /opt/data/documentacion_creada/.
+
+
+      7. **Entrega y Guardado Asistido:** Inmediatamente DESPUÉS de guardar, informa
+      al usuario que el archivo fue creado con éxito y que quedó guardado en /opt/data/documentacion_creada/
+      (persiste en su Windows dentro de la carpeta oculta .hermes\\documentacion_creada).
+      Como esa carpeta interna no es cómoda para revisar, le entregarás un comando
+      de PowerShell para copiar la documentación a la ubicación que él elija. PERO
+      ANTES de darle el comando, DEBES pedirle una ruta o dirección CONCRETA de destino
+      en su equipo. INSISTE Y NO CONTINÚES: NO aceptes respuestas vagas como "en cualquier
+      lugar", "donde sea" o "tú decide"; vuelve a pedir una ruta específica cuantas
+      veces haga falta. Una vez que la tengas, entrégale el comando de PowerShell
+      YA personalizado con esa ruta exacta y explícale en lenguaje sencillo: (a) cómo
+      abrir PowerShell, (b) para qué sirve el comando y (c) qué hace cada parte. REGLA
+      DE SEGURIDAD OBLIGATORIA: el comando NUNCA debe usar -Force ni sobrescribir;
+      debe copiar la documentación DENTRO de una subcarpeta propia y nueva en la ruta
+      indicada, y si esa subcarpeta ya existiera, DETENERSE sin copiar y avisar del
+      conflicto. El comando copia desde $env:USERPROFILE\\.hermes\\documentacion_creada\\
+      hacia la ruta que indicó el usuario. DESPUÉS de entregar el comando, deja ABIERTA,
+      sin exigir respuesta inmediata, la pregunta de si desea subir la documentación
+      a un repositorio externo (GitLab, GitHub o Azure DevOps) o moverla a la base
+      de conocimiento, y acláraselo así: "Revisa primero la documentación en la ubicación
+      que elegiste y respóndeme cuando la hayas revisado, no en este mismo momento."
+      NO ejecutes ni presiones por la subida hasta que el usuario, tras revisar, te
+      lo confirme.'
+  max_empty_retries: 0
+terminal:
+  backend: local
+  cwd: .
+  timeout: 3600
+  home_mode: auto
+  container_cpu: 1
+  container_memory: 5120
+  container_disk: 51200
+  container_persistent: true
+  docker_mount_cwd_to_workspace: false
+  lifetime_seconds: 300
+web:
+  backend: ddgs
+browser:
+  inactivity_timeout: 120
+  extension_control:
+    enabled: false
+  cloud_provider: local
+tool_loop_guardrails:
+  warnings_enabled: true
+  hard_stop_enabled: false
+  warn_after:
+    exact_failure: 2
+    same_tool_failure: 3
+    idempotent_no_progress: 2
+  hard_stop_after:
+    exact_failure: 5
+    same_tool_failure: 8
+    idempotent_no_progress: 5
+compression:
+  enabled: true
+  checkpoint_required: false
+  progress_notices: false
+  threshold: 0.5
+  target_ratio: 0.2
+  protect_last_n: 20
+  min_tail_user_messages: 1
+  max_attempts: 3
+  proactive_prune_tokens: 0
+  proactive_prune_min_result_chars: 8000
+  proactive_prune_min_reclaim_tokens: 4096
+  protect_first_n: 3
+  codex_gpt55_autoraise: true
+  codex_app_server_auto: native
+  codex_responses_native: false
+  codex_responses_compact_threshold: 200000
+  idle_compact_after_seconds: 0
+prompt_caching:
+  cache_ttl: 5m
+display:
+  compact: false
+  busy_input_mode: interrupt
+  bell_on_complete: false
+  show_reasoning: false
+  background_process_notifications: concise
+  streaming: true
+  skin: hierdoku
+  interim_assistant_messages: true
+  tool_progress: all
+  cleanup_progress: false
+  long_running_notifications: true
+  busy_ack_detail: true
+stt:
+  enabled: true
+  language: en
+  local:
+    model: base
+  openai:
+    model: whisper-1
+    language: ''
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  memory_char_limit: 2200
+  user_char_limit: 1375
+  nudge_interval: 10
+delegation:
+  max_iterations: 250
+skills:
+  creation_nudge_interval: 15
+approvals:
+  mode: 'off'
+command_allowlist:
+  - overwrite system file via redirection
+  - overwrite project env/config file
+  - delete in root path
+  - script execution via -e/-c flag
+  - script execution via heredoc
+  - recursive delete
+kanban:
+  review_dispatch: true
+code_execution:
+  timeout: 300
+  max_tool_calls: 50
+streaming:
+  enabled: false
+onboarding:
+  seen:
+    tool_progress_prompt: true
+    busy_input_prompt: true
+telemetry:
+  shared_metrics:
+    enabled: false
+updates:
+  pre_update_backup: false
+  backup_keep: 5
+  non_interactive_local_changes: stash
+computer_use:
+  backend: cua
+_config_version: 39
+session_reset:
+  mode: none
+  idle_minutes: 1440
+  at_hour: 4
+group_sessions_per_user: true
+platform_toolsets:
+  cli:
+    - browser
+    - code_execution
+    - computer_use
+    - cronjob
+    - delegation
+    - file
+    - image_gen
+    - kanban
+    - memory
+    - session_search
+    - skills
+    - terminal
+    - todo
+    - tts
+    - vision
+    - web
+  telegram:
+    - hermes-telegram
+  discord:
+    - hermes-discord
+  whatsapp:
+    - hermes-whatsapp
+  slack:
+    - hermes-slack
+  signal:
+    - hermes-signal
+  homeassistant:
+    - hermes-homeassistant
+  qqbot:
+    - hermes-qqbot
+  yuanbao:
+    - hermes-yuanbao
+  teams:
+    - hermes-teams
+  google_chat:
+    - hermes-google_chat
+known_plugin_toolsets:
+  cli:
+    - a2a
+    - spotify
+known_builtin_toolsets:
+  cli:
+    - browser
+    - clarify
+    - code_execution
+    - computer_use
+    - context_engine
+    - cronjob
+    - delegation
+    - discord
+    - discord_admin
+    - file
+    - homeassistant
+    - image_gen
+    - memory
+    - session_search
+    - skills
+    - spotify
+    - stt
+    - terminal
+    - todo
+    - tts
+    - video
+    - video_gen
+    - vision
+    - web
+    - x_search
+    - yuanbao
+platforms:
+  webhook:
+    enabled: true
+    extra:
+      port: 8644
+      secret: ${env:WEBHOOK_SECRET}
+
+# ── Security ──────────────────────────────────────────────────────────
+# Secret redaction is ON by default — strings that look like API keys,
+# tokens, and passwords are masked in tool output, logs, and chat
+# responses before the model or user ever sees them. Set redact_secrets
+# to false to disable (e.g. when developing the redactor itself).
+# tirith pre-exec scanning is enabled by default when the tirith binary
+# is available. Configure via security.tirith_* keys or env vars
+# (TIRITH_ENABLED, TIRITH_BIN, TIRITH_TIMEOUT, TIRITH_FAIL_OPEN).
+#
+# security:
+#   redact_secrets: true
+#   tirith_enabled: true
+#   tirith_path: "tirith"
+#   tirith_timeout: 5
+#   tirith_fail_open: true
+
+# ── Fallback Model ────────────────────────────────────────────────────
+# Automatic provider failover when primary is unavailable.
+# Uncomment and configure to enable. Triggers on rate limits (429),
+# overload (529), service errors (503), or connection failures.
+#
+# Supported providers:
+#   openrouter   (OPENROUTER_API_KEY)  — routes to any model
+#   openai-codex (OAuth — hermes auth) — OpenAI Codex
+#   nous         (OAuth — hermes auth) — Nous Portal
+#   zai          (ZAI_API_KEY)         — Z.AI / GLM
+#   kimi-coding  (KIMI_API_KEY)        — Kimi / Moonshot
+#   kimi-coding-cn (KIMI_CN_API_KEY)   — Kimi / Moonshot (China)
+#   minimax      (MINIMAX_API_KEY)     — MiniMax
+#   minimax-cn   (MINIMAX_CN_API_KEY)  — MiniMax (China)
+#   bedrock      (AWS IAM / boto3)     — AWS Bedrock (Converse API)
+#
+# For custom OpenAI-compatible endpoints, add base_url and key_env.
+#
+# fallback_model:
+#   provider: openrouter
+#   model: anthropic/claude-sonnet-4
